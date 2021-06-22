@@ -43,7 +43,7 @@ class PrintingPlugin extends PrintingPlatform {
     PrintingPlatform.instance = PrintingPlugin();
   }
 
-  static const String _frameId = '__net_nfet_printing__';
+  static int _frameNumber = 0;
 
   @override
   Future<PrintingInfo> info() async {
@@ -113,7 +113,9 @@ class PrintingPlugin extends PrintingPlatform {
       final pdfUrl = html.Url.createObjectUrl(pdfFile);
       final html.HtmlDocument doc = js.context['document'];
 
-      final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
+      final _frameId = '__net_nfet_printing__${_frameNumber++}';
+
+      final frame = doc.createElement('iframe');
       frame.setAttribute(
         'style',
         'visibility: hidden; height: 0; width: 0; position: absolute;',
