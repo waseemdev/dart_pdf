@@ -46,7 +46,7 @@ class Context {
     PdfPage? page,
     PdfGraphics? canvas,
     required HashMap<Type, Inherited> inherited,
-  })   : _page = page,
+  })  : _page = page,
         _canvas = canvas,
         _inherited = inherited;
 
@@ -111,6 +111,12 @@ class Context {
       x.reduce(math.max),
       y.reduce(math.max),
     );
+  }
+
+  PdfPoint localToGlobalPoint(PdfPoint point) {
+    final mat = canvas.getTransform();
+    final xy = mat.transform3(Vector3(point.x, point.y, 0));
+    return PdfPoint(xy.x, xy.y);
   }
 }
 

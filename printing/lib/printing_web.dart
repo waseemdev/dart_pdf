@@ -97,63 +97,84 @@ class PrintingPlugin extends PrintingPlatform {
 
     final String userAgent = js.context['navigator']['userAgent'];
     final isChrome = js.context['chrome'] != null;
-    final isSafari = js.context['safari'] != null;
+    final isSafari = js.context['safari'] != null &&
+        !userAgent.contains(RegExp(r'Version/14\.1\.'));
     final isMobile = userAgent.contains('Mobile');
-    // Maybe Firefox will support iframe printing
-    // https://bugzilla.mozilla.org/show_bug.cgi?id=911444
-    // final isFirefox = userAgent.contains('Firefox');
+    final isFirefox = userAgent.contains('Firefox');
 
-    // Chrome and Safari on a desktop computer
-    if ((isChrome || isSafari) && !isMobile) {
+    // Chrome, Safari, and Firefox on a desktop computer
+    if ((isChrome || isSafari || isFirefox) && !isMobile) {
       final completer = Completer<bool>();
       final pdfFile = html.Blob(
-        <Uint8List>[Uint8List.fromList(result)],
+        <Uint8List>[result],
         'application/pdf',
       );
       final pdfUrl = html.Url.createObjectUrl(pdfFile);
       final html.HtmlDocument doc = js.context['document'];
 
       final _frameId = '__net_nfet_printing__${_frameNumber++}';
+      final _scriptId = '__net_nfet_printing_s__${_frameNumber++}';
 
+      // final script = doc.getElementById(_scriptId) ?? doc.createElement('script');
+      final script = doc.createElement('script');
+      script.setAttribute('id', _scriptId);
+      script.setAttribute('type', 'text/javascript');
+      script.innerText =
+          '''function ${_frameId}_print(){var f=document.getElementById('$_frameId');f.focus();f.contentWindow.print();}''';
+      doc.body!.append(script);
+
+      // final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
       final frame = doc.createElement('iframe');
-      frame.setAttribute(
-        'style',
-        'visibility: hidden; height: 0; width: 0; position: absolute;',
-        // 'height: 400px; width: 600px; position: absolute; z-index: 1000',
-      );
+
+      if (isFirefox) {
+        // Set the iframe to be is visible on the page (guaranteed by fixed position) but hidden using opacity 0, because
+        // this works in Firefox. The height needs to be sufficient for some part of the document other than the PDF
+        // viewer's toolbar to be visible in the page
+        frame.setAttribute('style',
+            'width: 1px; height: 100px; position: fixed; left: 0; top: 0; opacity: 0; border-width: 0; margin: 0; padding: 0');
+      } else {
+        // Hide the iframe in other browsers
+        frame.setAttribute(
+          'style',
+          'visibility: hidden; height: 0; width: 0; position: absolute;',
+          // 'height: 400px; width: 600px; position: absolute; z-index: 1000',
+        );
+      }
 
       frame.setAttribute('id', _frameId);
       frame.setAttribute('src', pdfUrl);
+      final stopWatch = Stopwatch();
 
       html.EventListener? load;
       load = (html.Event event) {
         frame.removeEventListener('load', load);
-        final js.JsObject win =
-            js.JsObject.fromBrowserObject(frame)['contentWindow'];
-        frame.focus();
-        win.callMethod('print');
-        completer.complete(true);
+        Timer(Duration(milliseconds: isSafari ? 500 : 0), () {
+          try {
+            stopWatch.start();
+            js.context.callMethod('${_frameId}_print');
+            stopWatch.stop();
+            completer.complete(true);
+          } catch (e) {
+            print(e);
+            completer.complete(_getPdf(result));
+          }
+        });
       };
 
       frame.addEventListener('load', load);
 
       doc.body!.append(frame);
-      return completer.future;
+
+      final res = await completer.future;
+      // If print() is synchronous
+      if (stopWatch.elapsedMilliseconds > 1000) {
+        frame.remove();
+        script.remove();
+      }
+      return res;
     }
 
-    // All the others
-    final pdfFile = html.Blob(
-      <Uint8List>[Uint8List.fromList(result)],
-      'application/pdf',
-    );
-    final pdfUrl = html.Url.createObjectUrl(pdfFile);
-    final html.HtmlDocument doc = js.context['document'];
-    final link = html.AnchorElement(href: pdfUrl);
-    link.target = '_blank';
-    doc.body?.append(link);
-    link.click();
-    link.remove();
-    return true;
+    return _getPdf(result);
   }
 
   @override
@@ -165,14 +186,22 @@ class PrintingPlugin extends PrintingPlatform {
     String? body,
     List<String>? emails,
   ) async {
+    return _getPdf(bytes, filename: filename);
+  }
+
+  Future<bool> _getPdf(Uint8List bytes, {String? filename}) async {
     final pdfFile = html.Blob(
-      <Uint8List>[Uint8List.fromList(bytes)],
+      <Uint8List>[bytes],
       'application/pdf',
     );
     final pdfUrl = html.Url.createObjectUrl(pdfFile);
     final html.HtmlDocument doc = js.context['document'];
     final link = html.AnchorElement(href: pdfUrl);
-    link.download = filename;
+    if (filename != null) {
+      link.download = filename;
+    } else {
+      link.target = '_blank';
+    }
     doc.body?.append(link);
     link.click();
     link.remove();

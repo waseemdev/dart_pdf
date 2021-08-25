@@ -29,7 +29,6 @@ pdf/open-sans.ttf:
 
 pdf/open-sans-bold.ttf:
 	curl -L "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rg-VQ.ttf" > $@
-	cp $@ demo/assets/
 
 pdf/roboto.ttf:
 	curl -L "https://fonts.gstatic.com/s/robotomono/v7/L0x5DF4xlVMF-BfR8bXMIghM.ttf" > $@
@@ -248,8 +247,10 @@ ref: svg
 	cd $@; curl -OL 'https://www.adobe.com/content/dam/acom/en/devnet/pdf/adobe_supplement_iso32000.pdf'
 	cd $@; curl -OL 'https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/pdf_reference_1-7.pdf'
 
-gh-pages: all
+gh-social: all
 	cd test; $(DART_BIN) --enable-asserts github_social_preview.dart
+
+gh-pages: all
 	cd demo; $(FLUTTER_BIN) build web
 	git checkout gh-pages
 	rm -rf assets icons

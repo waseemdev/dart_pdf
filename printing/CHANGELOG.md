@@ -1,5 +1,26 @@
 # Changelog
 
+## 5.5.1
+
+- Fix typo in README.
+
+## 5.5.0
+
+- Add custom loading widget to PdfPreview widget
+
+## 5.4.3
+
+- Update Pdfium libraries
+
+## 5.4.2
+
+- Use proper print dialog on Firefox
+- Mitigate Safari 14.1.1 print() bug
+
+## 5.4.1
+
+- Always use HTTPS to download Google Fonts
+
 ## 5.4.0
 
 - Add Google Fonts support
