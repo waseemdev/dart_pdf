@@ -22,7 +22,8 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:printing_demo/data.dart';
+
+import '../data.dart';
 
 const PdfColor green = PdfColor.fromInt(0xff9ce5d0);
 const PdfColor lightGreen = PdfColor.fromInt(0xffcdf1e7);
@@ -272,10 +273,6 @@ class _Percent extends pw.StatelessWidget {
     required this.size,
     required this.value,
     required this.title,
-    this.fontSize = 1.2,
-    this.color = green,
-    this.backgroundColor = PdfColors.grey300,
-    this.strokeWidth = 5,
   });
 
   final double size;
@@ -284,13 +281,13 @@ class _Percent extends pw.StatelessWidget {
 
   final pw.Widget title;
 
-  final double fontSize;
+  static const fontSize = 1.2;
 
-  final PdfColor color;
+  PdfColor get color => green;
 
-  final PdfColor backgroundColor;
+  static const backgroundColor = PdfColors.grey300;
 
-  final double strokeWidth;
+  static const strokeWidth = 5.0;
 
   @override
   pw.Widget build(pw.Context context) {

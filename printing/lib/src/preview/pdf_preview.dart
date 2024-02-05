@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-import 'dart:async';
-import 'dart:math';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -25,8 +21,11 @@ import 'package:pdf/widgets.dart' as pw;
 import '../callback.dart';
 import '../printing.dart';
 import '../printing_info.dart';
-import 'pdf_preview_action.dart';
-import 'pdf_preview_raster.dart';
+import 'actions.dart';
+import 'controller.dart';
+import 'custom.dart';
+
+export 'custom.dart';
 
 /// Flutter widget that uses the rasterized pdf pages to display a document.
 class PdfPreview extends StatefulWidget {
@@ -60,6 +59,8 @@ class PdfPreview extends StatefulWidget {
     this.padding,
     this.shouldRepaint = false,
     this.loadingWidget,
+    this.onPageFormatChanged,
+    this.dpi,
   }) : super(key: key);
 
   static const _defaultPageFormats = <String, PdfPageFormat>{
@@ -94,8 +95,8 @@ class PdfPreview extends StatefulWidget {
   /// Add a switch to show debug view
   final bool canDebug;
 
-  /// Additionnal actions to add to the widget
-  final List<PdfPreviewAction>? actions;
+  /// Additional actions to add to the widget
+  final List<Widget>? actions;
 
   /// List of page formats the user can choose
   final Map<String, PdfPageFormat> pageFormats;
@@ -106,7 +107,7 @@ class PdfPreview extends StatefulWidget {
   /// Called if the user prints the pdf document
   final void Function(BuildContext context)? onPrinted;
 
-  /// Called if an error creating the Pdf occured
+  /// Called if an error creating the Pdf occurred
   final void Function(BuildContext context, dynamic error)? onPrintError;
 
   /// Called if the user shares the pdf document
@@ -115,7 +116,7 @@ class PdfPreview extends StatefulWidget {
   /// Decoration of scrollView
   final Decoration? scrollViewDecoration;
 
-  /// Decoration of _PdfPreviewPage
+  /// Decoration of PdfPreviewPage
   final Decoration? pdfPreviewPageDecoration;
 
   /// Name of the PDF when sharing. It must include the extension.
@@ -155,93 +156,67 @@ class PdfPreview extends StatefulWidget {
   /// If null, a [CircularProgressIndicator] is used instead.
   final Widget? loadingWidget;
 
+  /// The page format has changed
+  final ValueChanged<PdfPageFormat>? onPageFormatChanged;
+
+  /// The rendering dots per inch resolution
+  /// If not provided, this value is calculated.
+  final double? dpi;
+
   @override
   _PdfPreviewState createState() => _PdfPreviewState();
 }
 
-class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
-  final GlobalKey<State<StatefulWidget>> shareWidget = GlobalKey();
-  final GlobalKey<State<StatefulWidget>> listView = GlobalKey();
+class _PdfPreviewState extends State<PdfPreview> {
+  final previewWidget = GlobalKey<PdfPreviewCustomState>();
+  late PdfPreviewData previewData;
 
-  PdfPageFormat? _pageFormat;
+  /// Printing subsystem information
+  PrintingInfo? info;
 
-  String get localPageFormat {
-    final locale = WidgetsBinding.instance!.window.locale;
-    // ignore: unnecessary_cast
-    final cc = (locale as Locale?)?.countryCode ?? 'US';
+  var infoLoaded = false;
 
-    if (cc == 'US' || cc == 'CA' || cc == 'MX') {
-      return 'Letter';
-    }
-    return 'A4';
-  }
+  PdfPageFormat computeActualPageFormat() {
+    var format = previewData.pageFormat;
+    final pages = previewWidget.currentState?.pages ?? const [];
+    final dpi = previewWidget.currentState?.dpi ?? PdfPageFormat.inch;
 
-  @override
-  PdfPageFormat get pageFormat {
-    _pageFormat ??= widget.initialPageFormat == null
-        ? widget.pageFormats[localPageFormat]
-        : _pageFormat = widget.initialPageFormat!;
-
-    if (!widget.pageFormats.containsValue(_pageFormat)) {
-      _pageFormat = widget.initialPageFormat ??
-          (widget.pageFormats.isNotEmpty
-              ? widget.pageFormats.values.first
-              : PdfPreview._defaultPageFormats[localPageFormat]);
+    if (!widget.canChangePageFormat && pages.isNotEmpty) {
+      format = PdfPageFormat(
+        pages.first.width * PdfPageFormat.inch / dpi,
+        pages.first.height * PdfPageFormat.inch / dpi,
+        marginAll: 5 * PdfPageFormat.mm,
+      );
     }
 
-    return _pageFormat!;
+    return format;
   }
-
-  bool infoLoaded = false;
-
-  int? preview;
-
-  double? updatePosition;
-
-  final scrollController = ScrollController(
-    keepScrollOffset: true,
-  );
-
-  final transformationController = TransformationController();
-
-  Timer? previewUpdate;
-
-  static const _errorMessage = 'Unable to display the document';
 
   @override
   void initState() {
-    if (widget.initialPageFormat == null) {
-      final locale = WidgetsBinding.instance!.window.locale;
-      // ignore: unnecessary_cast
-      final cc = (locale as Locale?)?.countryCode ?? 'US';
+    previewData = PdfPreviewData(
+      buildDocument: widget.build,
+      pageFormats: widget.pageFormats.isNotEmpty
+          ? widget.pageFormats
+          : PdfPreview._defaultPageFormats,
+      initialPageFormat: widget.initialPageFormat,
+      onComputeActualPageFormat: computeActualPageFormat,
+    );
 
-      if (cc == 'US' || cc == 'CA' || cc == 'MX') {
-        _pageFormat = PdfPageFormat.letter;
-      } else {
-        _pageFormat = PdfPageFormat.a4;
+    previewData.addListener(() {
+      if (mounted) {
+        setState(() {});
       }
-    } else {
-      _pageFormat = widget.initialPageFormat!;
-    }
-
-    final _pageFormats = widget.pageFormats;
-    if (!_pageFormats.containsValue(pageFormat)) {
-      _pageFormat = _pageFormats.values.first;
-    }
+      widget.onPageFormatChanged?.call(previewData.pageFormat);
+    });
 
     super.initState();
   }
 
   @override
   void dispose() {
-    previewUpdate?.cancel();
+    previewData.dispose();
     super.dispose();
-  }
-
-  @override
-  void reassemble() {
-    raster();
-    super.reassemble();
   }
 
   @override
@@ -249,10 +224,15 @@ class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
     if (oldWidget.build != widget.build ||
         widget.shouldRepaint ||
         widget.pageFormats != oldWidget.pageFormats) {
-      preview = null;
-      updatePosition = null;
-
-      raster();
+      previewData = PdfPreviewData(
+        buildDocument: widget.build,
+        pageFormats: widget.pageFormats.isNotEmpty
+            ? widget.pageFormats
+            : PdfPreview._defaultPageFormats,
+        initialPageFormat: previewData.pageFormat,
+        onComputeActualPageFormat: computeActualPageFormat,
+      );
+      setState(() {});
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -264,70 +244,11 @@ class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
       Printing.info().then((PrintingInfo _info) {
         setState(() {
           info = _info;
-          raster();
         });
       });
     }
 
-    raster();
     super.didChangeDependencies();
-  }
-
-  Widget _showError(Object error) {
-    if (widget.onError != null) {
-      return widget.onError!(context, error);
-    }
-
-    return ErrorWidget(error);
-  }
-
-  Widget _createPreview() {
-    if (error != null) {
-      return _showError(error!);
-    }
-
-    final _info = info;
-    if (_info != null && !_info.canRaster) {
-      return _showError(_errorMessage);
-    }
-
-    if (pages.isEmpty) {
-      return widget.loadingWidget ??
-          const Center(
-            child: CircularProgressIndicator(),
-          );
-    }
-
-    return ListView.builder(
-      controller: scrollController,
-      padding: widget.padding,
-      itemCount: pages.length,
-      itemBuilder: (BuildContext context, int index) => GestureDetector(
-        onDoubleTap: () {
-          setState(() {
-            updatePosition = scrollController.position.pixels;
-            preview = index;
-            transformationController.value.setIdentity();
-          });
-        },
-        child: pages[index],
-      ),
-    );
-  }
-
-  Widget _zoomPreview() {
-    return GestureDetector(
-      onDoubleTap: () {
-        setState(() {
-          preview = null;
-        });
-      },
-      child: InteractiveViewer(
-        transformationController: transformationController,
-        maxScale: 5,
-        child: Center(child: pages[preview!]),
-      ),
-    );
   }
 
   @override
@@ -335,137 +256,40 @@ class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
     final theme = Theme.of(context);
     final iconColor = theme.primaryIconTheme.color ?? Colors.white;
 
-    Widget page;
-
-    if (preview != null) {
-      page = _zoomPreview();
-    } else {
-      page = Container(
-        constraints: widget.maxPageWidth != null
-            ? BoxConstraints(maxWidth: widget.maxPageWidth!)
-            : null,
-        child: _createPreview(),
-      );
-
-      if (updatePosition != null) {
-        Timer.run(() {
-          scrollController.jumpTo(updatePosition!);
-          updatePosition = null;
-        });
-      }
-    }
-
-    final Widget scrollView = Container(
-      decoration: widget.scrollViewDecoration ??
-          BoxDecoration(
-            gradient: LinearGradient(
-              colors: <Color>[Colors.grey.shade400, Colors.grey.shade200],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: page,
-    );
-
     final actions = <Widget>[];
 
-    if (widget.allowPrinting && info?.canPrint == true) {
-      actions.add(
-        IconButton(
-          icon: const Icon(Icons.print),
-          onPressed: _print,
-        ),
-      );
+    if (widget.useActions && widget.allowPrinting && info?.canPrint == true) {
+      actions.add(PdfPrintAction(
+        jobName: widget.pdfFileName,
+        dynamicLayout: widget.dynamicLayout,
+        onPrinted:
+            widget.onPrinted == null ? null : () => widget.onPrinted!(context),
+        onPrintError: widget.onPrintError == null
+            ? null
+            : (dynamic error) => widget.onPrintError!(context, error),
+      ));
     }
 
-    if (widget.allowSharing && info?.canShare == true) {
-      actions.add(
-        IconButton(
-          key: shareWidget,
-          icon: const Icon(Icons.share),
-          onPressed: _share,
-        ),
-      );
+    if (widget.useActions && widget.allowSharing && info?.canShare == true) {
+      actions.add(PdfShareAction(
+        filename: widget.pdfFileName,
+        onShared:
+            widget.onPrinted == null ? null : () => widget.onPrinted!(context),
+      ));
     }
 
-    if (widget.canChangePageFormat) {
-      final keys = widget.pageFormats.keys.toList();
-      actions.add(
-        DropdownButton<PdfPageFormat>(
-          dropdownColor: theme.primaryColor,
-          icon: Icon(
-            Icons.arrow_drop_down,
-            color: iconColor,
-          ),
-          value: pageFormat,
-          items: List<DropdownMenuItem<PdfPageFormat>>.generate(
-            widget.pageFormats.length,
-            (int index) {
-              final key = keys[index];
-              final val = widget.pageFormats[key];
-              return DropdownMenuItem<PdfPageFormat>(
-                value: val,
-                child: Text(key, style: TextStyle(color: iconColor)),
-              );
-            },
-          ),
-          onChanged: (PdfPageFormat? pageFormat) {
-            setState(() {
-              if (pageFormat != null) {
-                _pageFormat = pageFormat;
-                raster();
-              }
-            });
-          },
-        ),
-      );
+    if (widget.useActions && widget.canChangePageFormat) {
+      actions.add(PdfPageFormatAction(
+        pageFormats: widget.pageFormats,
+      ));
 
-      if (widget.canChangeOrientation) {
-        horizontal ??= pageFormat.width > pageFormat.height;
-
-        final disabledColor = iconColor.withAlpha(120);
-        actions.add(
-          ToggleButtons(
-            renderBorder: false,
-            borderColor: disabledColor,
-            color: disabledColor,
-            selectedBorderColor: iconColor,
-            selectedColor: iconColor,
-            onPressed: (int index) {
-              setState(() {
-                horizontal = index == 1;
-                raster();
-              });
-            },
-            isSelected: <bool>[horizontal == false, horizontal == true],
-            children: <Widget>[
-              Transform.rotate(
-                  angle: -pi / 2, child: const Icon(Icons.note_outlined)),
-              const Icon(Icons.note_outlined),
-            ],
-          ),
-        );
+      if (widget.useActions && widget.canChangeOrientation) {
+        // ignore: prefer_const_constructors
+        actions.add(PdfPageOrientationAction());
       }
     }
 
-    if (widget.actions != null) {
-      for (final action in widget.actions!) {
-        actions.add(
-          IconButton(
-            icon: action.icon,
-            onPressed: action.onPressed == null
-                ? null
-                : () => action.onPressed!(
-                      context,
-                      widget.build,
-                      computedPageFormat,
-                    ),
-          ),
-        );
-      }
-    }
+    widget.actions?.forEach(actions.add);
 
     assert(() {
       if (actions.isNotEmpty && widget.canDebug) {
@@ -474,12 +298,10 @@ class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
             activeColor: Colors.red,
             value: pw.Document.debug,
             onChanged: (bool value) {
-              setState(
-                () {
-                  pw.Document.debug = value;
-                  raster();
-                },
-              );
+              setState(() {
+                pw.Document.debug = value;
+              });
+              previewWidget.currentState?.raster();
             },
           ),
         );
@@ -488,104 +310,52 @@ class _PdfPreviewState extends State<PdfPreview> with PdfPreviewRaster {
       return true;
     }());
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        Expanded(
-            child: scrollController.hasClients
-                ? Scrollbar(controller: scrollController, child: scrollView)
-                : scrollView),
-        if (actions.isNotEmpty && widget.useActions)
-          IconTheme.merge(
-            data: IconThemeData(
-              color: iconColor,
-            ),
-            child: Material(
-              elevation: 4,
-              color: theme.primaryColor,
-              child: SizedBox(
-                width: double.infinity,
-                child: SafeArea(
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceAround,
-                    children: actions,
+    return PdfPreviewController(
+      data: previewData,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: Builder(builder: (context) {
+              final controller = PdfPreviewController.listen(context);
+              return PdfPreviewCustom(
+                key: previewWidget,
+                build: controller.buildDocument,
+                loadingWidget: widget.loadingWidget,
+                maxPageWidth: widget.maxPageWidth,
+                onError: widget.onError,
+                padding: widget.padding,
+                pageFormat: controller.pageFormat,
+                pages: widget.pages,
+                pdfPreviewPageDecoration: widget.pdfPreviewPageDecoration,
+                previewPageMargin: widget.previewPageMargin,
+                scrollViewDecoration: widget.scrollViewDecoration,
+                shouldRepaint: widget.shouldRepaint,
+                dpi: widget.dpi,
+              );
+            }),
+          ),
+          if (actions.isNotEmpty)
+            IconTheme.merge(
+              data: IconThemeData(
+                color: iconColor,
+              ),
+              child: Material(
+                elevation: 4,
+                color: theme.primaryColor,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SafeArea(
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceAround,
+                      children: actions,
+                    ),
                   ),
                 ),
               ),
             ),
-          )
-      ],
+        ],
+      ),
     );
-  }
-
-  Future<void> _print() async {
-    var format = computedPageFormat;
-
-    if (!widget.canChangePageFormat && pages.isNotEmpty) {
-      format = PdfPageFormat(
-        pages.first.page!.width * 72 / dpi,
-        pages.first.page!.height * 72 / dpi,
-        marginAll: 5 * PdfPageFormat.mm,
-      );
-    }
-
-    try {
-      final result = await Printing.layoutPdf(
-        onLayout: widget.build,
-        name: widget.pdfFileName ?? 'Document',
-        format: format,
-        dynamicLayout: widget.dynamicLayout,
-      );
-
-      if (result && widget.onPrinted != null) {
-        widget.onPrinted!(context);
-      }
-    } catch (exception, stack) {
-      InformationCollector? collector;
-
-      assert(() {
-        collector = () sync* {
-          yield StringProperty('PageFormat', computedPageFormat.toString());
-        };
-        return true;
-      }());
-
-      FlutterError.reportError(FlutterErrorDetails(
-        exception: exception,
-        stack: stack,
-        library: 'printing',
-        context: ErrorDescription('while printing a PDF'),
-        informationCollector: collector,
-      ));
-
-      if (widget.onPrintError != null) {
-        widget.onPrintError!(context, exception);
-      }
-    }
-  }
-
-  Future<void> _share() async {
-    // Calculate the widget center for iPad sharing popup position
-    final referenceBox =
-        shareWidget.currentContext!.findRenderObject() as RenderBox;
-    final topLeft =
-        referenceBox.localToGlobal(referenceBox.paintBounds.topLeft);
-    final bottomRight =
-        referenceBox.localToGlobal(referenceBox.paintBounds.bottomRight);
-    final bounds = Rect.fromPoints(topLeft, bottomRight);
-
-    final bytes = await widget.build(computedPageFormat);
-    final result = await Printing.sharePdf(
-      bytes: bytes,
-      bounds: bounds,
-      filename: widget.pdfFileName ?? 'document.pdf',
-      body: widget.shareActionExtraBody,
-      subject: widget.shareActionExtraSubject,
-      emails: widget.shareActionExtraEmails,
-    );
-
-    if (result && widget.onShared != null) {
-      widget.onShared!(context);
-    }
   }
 }

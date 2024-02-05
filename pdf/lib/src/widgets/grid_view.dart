@@ -16,9 +16,9 @@
 
 import 'dart:math' as math;
 
-import 'package:pdf/pdf.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
 import 'flex.dart';
 import 'geometry.dart';
 import 'multi_page.dart';
@@ -35,17 +35,13 @@ class _GridViewContext extends WidgetContext {
   void apply(_GridViewContext other) {
     firstChild = other.firstChild;
     lastChild = other.lastChild;
-    childCrossAxis = other.childCrossAxis;
-    childMainAxis = other.childMainAxis;
+    childCrossAxis = other.childCrossAxis ?? childCrossAxis;
+    childMainAxis = other.childMainAxis ?? childMainAxis;
   }
 
   @override
   WidgetContext clone() {
-    return _GridViewContext()
-      ..firstChild = firstChild
-      ..lastChild = lastChild
-      ..childCrossAxis = childCrossAxis
-      ..childMainAxis = childMainAxis;
+    return _GridViewContext()..apply(this);
   }
 
   @override
@@ -162,7 +158,7 @@ class GridView extends MultiChildWidget with SpanningWidget {
     var c = 0;
     _context.lastChild = _context.firstChild;
 
-    for (var child in children.sublist(
+    for (final child in children.sublist(
         _context.firstChild,
         math.min(children.length,
             _context.firstChild + crossAxisCount * _mainAxisCount!))) {
@@ -336,6 +332,7 @@ class GridView extends MultiChildWidget with SpanningWidget {
 
   @override
   void restoreContext(_GridViewContext context) {
+    _context.apply(context);
     _context.firstChild = context.lastChild;
   }
 

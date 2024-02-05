@@ -30,7 +30,7 @@ List<TableRow> buildTable(
   final rows = <TableRow>[];
   {
     final tableRow = <Widget>[];
-    for (var cell in <String>['Hue', 'Color', 'RGBA']) {
+    for (final cell in <String>['Hue', 'Color', 'RGBA']) {
       tableRow.add(Container(
           alignment: Alignment.center,
           margin: const EdgeInsets.all(5),
@@ -55,7 +55,7 @@ List<TableRow> buildTable(
           height: Theme.of(context).tableCell.fontSize),
       Container(
           margin: const EdgeInsets.all(5),
-          child: Text('${color.toHex()}', style: Theme.of(context).tableCell)),
+          child: Text(color.toHex(), style: Theme.of(context).tableCell)),
     ];
     rows.add(TableRow(children: tableRow));
   }

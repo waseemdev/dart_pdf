@@ -30,6 +30,8 @@ import 'data.dart';
 import 'examples.dart';
 
 class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   MyAppState createState() {
     return MyAppState();
@@ -42,7 +44,7 @@ class MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
 
   PrintingInfo? printingInfo;
 
-  var _data = CustomData();
+  var _data = const CustomData();
   var _hasData = false;
   var _pending = false;
 
@@ -162,8 +164,10 @@ class MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
   }
 
   void _showSources() {
-    ul.launch(
-      'https://github.com/DavBfr/dart_pdf/blob/master/demo/lib/examples/${examples[_tab].file}',
+    ul.launchUrl(
+      Uri.parse(
+        'https://github.com/DavBfr/dart_pdf/blob/master/demo/lib/examples/${examples[_tab].file}',
+      ),
     );
   }
 
@@ -175,10 +179,10 @@ class MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
           final controller = TextEditingController();
 
           return AlertDialog(
-            title: Text('Please type your name:'),
-            contentPadding: EdgeInsets.symmetric(horizontal: 20),
+            title: const Text('Please type your name:'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
             content: TextField(
-              decoration: InputDecoration(hintText: '[your name]'),
+              decoration: const InputDecoration(hintText: '[your name]'),
               controller: controller,
             ),
             actions: [
@@ -188,7 +192,7 @@ class MyAppState extends State<MyApp> with SingleTickerProviderStateMixin {
                     Navigator.pop(context, controller.text);
                   }
                 },
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );

@@ -16,11 +16,11 @@
 
 import 'dart:math';
 
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:xml/xml.dart';
 
+import '../../pdf.dart';
+import '../widgets/widget.dart';
 import 'brush.dart';
 import 'clip_path.dart';
 import 'operation.dart';
@@ -66,7 +66,7 @@ class SvgText extends SvgOperation {
 
     final font = painter.getFontCache(
         _brush.fontFamily!, _brush.fontStyle!, _brush.fontWeight!)!;
-    final pdfFont = font.getFont(Context(document: painter.document))!;
+    final pdfFont = font.getFont(Context(document: painter.document));
     final metrics = pdfFont.stringMetrics(text) * _brush.fontSize!.sizeValue;
     offset = PdfPoint((x ?? offset.x) + dx, (y ?? offset.y) + dy);
 

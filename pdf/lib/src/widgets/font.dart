@@ -17,8 +17,8 @@
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
-import 'package:pdf/pdf.dart';
 
+import '../../pdf.dart';
 import 'widget.dart';
 
 enum Type1Fonts {
@@ -43,7 +43,7 @@ enum Type1Fonts {
 class Font {
   Font() : font = null;
 
-  Font.type1(Type1Fonts this.font);
+  Font.type1(this.font);
 
   factory Font.courier() => Font.type1(Type1Fonts.courier);
   factory Font.courierBold() => Font.type1(Type1Fonts.courierBold);
@@ -82,7 +82,7 @@ class Font {
     Type1Fonts.zapfDingbats: 'ZapfDingbats'
   };
 
-  String? get fontName => _type1Map[font];
+  String get fontName => _type1Map[font]!;
 
   @protected
   PdfFont buildFont(PdfDocument pdfDocument) {
@@ -127,13 +127,13 @@ class Font {
 
   PdfFont? _pdfFont;
 
-  PdfFont? getFont(Context context) {
+  PdfFont getFont(Context context) {
     if (_pdfFont == null || _pdfFont!.pdfDocument != context.document) {
       final pdfDocument = context.document;
       _pdfFont = buildFont(pdfDocument);
     }
 
-    return _pdfFont;
+    return _pdfFont!;
   }
 
   @override
@@ -153,13 +153,25 @@ class TtfFont extends Font {
   }
 
   @override
-  String? get fontName {
+  String get fontName {
     if (_pdfFont != null) {
       return _pdfFont!.fontName;
     }
 
     final font = TtfParser(data);
     return font.fontName;
+  }
+
+  String? fontNameID(TtfParserName nameID) {
+    final pdfFont = _pdfFont;
+    if (pdfFont != null) {
+      if (pdfFont is PdfTtfFont) {
+        return pdfFont.font.getNameID(nameID);
+      }
+    }
+
+    final font = TtfParser(data);
+    return font.getNameID(nameID);
   }
 
   @override

@@ -23,6 +23,8 @@ import 'text.dart';
 import 'text_style.dart';
 import 'widget.dart';
 
+typedef DefaultThemeDataBuilder = ThemeData Function();
+
 @immutable
 class ThemeData extends Inherited {
   factory ThemeData({
@@ -78,8 +80,8 @@ class ThemeData extends Inherited {
     required this.tableCell,
     required this.softWrap,
     required this.overflow,
-    required this.textAlign,
     required this.iconTheme,
+    this.textAlign,
     this.maxLines,
   })  : assert(defaultTextStyle.inherit == false),
         assert(paragraphStyle.inherit == false),
@@ -100,6 +102,7 @@ class ThemeData extends Inherited {
     Font? italic,
     Font? boldItalic,
     Font? icons,
+    List<Font>? fontFallback,
   }) {
     final defaultStyle = TextStyle.defaultStyle().copyWith(
       font: base,
@@ -107,6 +110,7 @@ class ThemeData extends Inherited {
       fontBold: bold,
       fontItalic: italic,
       fontBoldItalic: boldItalic,
+      fontFallback: fontFallback,
     );
     final fontSize = defaultStyle.fontSize!;
 
@@ -125,12 +129,38 @@ class ThemeData extends Inherited {
       tableCell: defaultStyle.copyWith(fontSize: fontSize * 0.8),
       softWrap: true,
       overflow: TextOverflow.visible,
-      textAlign: TextAlign.left,
       iconTheme: IconThemeData.fallback(icons),
     );
   }
 
-  factory ThemeData.base() => ThemeData.withFont();
+  factory ThemeData.base() =>
+      buildThemeData == null ? ThemeData.withFont() : buildThemeData!();
+
+  static DefaultThemeDataBuilder? buildThemeData;
+
+  final TextStyle defaultTextStyle;
+
+  final TextStyle paragraphStyle;
+
+  final TextStyle header0;
+  final TextStyle header1;
+  final TextStyle header2;
+  final TextStyle header3;
+  final TextStyle header4;
+  final TextStyle header5;
+
+  final TextStyle bulletStyle;
+
+  final TextStyle tableHeader;
+
+  final TextStyle tableCell;
+
+  final TextAlign? textAlign;
+  final bool softWrap;
+  final int? maxLines;
+  final TextOverflow overflow;
+
+  final IconThemeData iconTheme;
 
   ThemeData copyWith({
     TextStyle? defaultTextStyle,
@@ -168,30 +198,6 @@ class ThemeData extends Inherited {
         maxLines: maxLines ?? this.maxLines,
         iconTheme: iconTheme ?? this.iconTheme,
       );
-
-  final TextStyle defaultTextStyle;
-
-  final TextStyle paragraphStyle;
-
-  final TextStyle header0;
-  final TextStyle header1;
-  final TextStyle header2;
-  final TextStyle header3;
-  final TextStyle header4;
-  final TextStyle header5;
-
-  final TextStyle bulletStyle;
-
-  final TextStyle tableHeader;
-
-  final TextStyle tableCell;
-
-  final TextAlign textAlign;
-  final bool softWrap;
-  final int? maxLines;
-  final TextOverflow overflow;
-
-  final IconThemeData iconTheme;
 }
 
 class Theme extends StatelessWidget {

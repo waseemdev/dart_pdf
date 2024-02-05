@@ -20,9 +20,9 @@ import 'package:meta/meta.dart';
 
 import 'data_types.dart';
 import 'document.dart';
-import 'function.dart';
-import 'object_dict.dart';
-import 'smask.dart';
+import 'obj/function.dart';
+import 'obj/object_dict.dart';
+import 'obj/smask.dart';
 
 enum PdfBlendMode {
   /// Selects the source colour, ignoring the backdrop
@@ -109,6 +109,10 @@ class PdfGraphicState {
   /// Color transfer function
   final PdfFunction? transferFunction;
 
+  @override
+  String toString() =>
+      '$runtimeType fillOpacity:$fillOpacity strokeOpacity:$strokeOpacity blendMode:$blendMode softMask:$softMask transferFunction:$transferFunction';
+
   PdfDict output() {
     final params = PdfDict();
 
@@ -139,7 +143,7 @@ class PdfGraphicState {
 
   @override
   bool operator ==(dynamic other) {
-    if (!(other is PdfGraphicState)) {
+    if (other is! PdfGraphicState) {
       return false;
     }
     return other.fillOpacity == fillOpacity &&

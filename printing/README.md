@@ -34,10 +34,18 @@ for documentation.
    target 'Runner' do
       use_frameworks!    # <-- Add this line
    ```
-4. For MacOS add printing capability by opening macos directory in XCode
 
-5. For the web, a javascript library and a small script has to be added to
-   your `web/index.html` file, just before `</head>`:
+4. For macOS applications, add the following print entitlement to the files
+   `macos/Runner/Release.entitlements` and `macos/Runner/DebugProfile.entitlements`:
+
+   ```xml
+   <key>com.apple.security.print</key>
+   <true/>
+   ```
+
+5. If you want to manually set the PdfJs library version for the web, a javascript
+   library and a small script has to be added to your `web/index.html` file, just
+   before `</head>`. Otherwise it is loaded automatically:
 
    ```html
    <script src="//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.8.335/pdf.min.js"></script>
@@ -45,6 +53,16 @@ for documentation.
        pdfjsLib.GlobalWorkerOptions.workerSrc = "//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.8.335/pdf.worker.min.js";
    </script>
    ```
+
+6. For Windows and Linux, you can force the pdfium version and architecture
+   on your main `CMakeLists.txt` with:
+
+   ```python
+   set(PDFIUM_VERSION "4929" CACHE STRING "" FORCE)
+   set(PDFIUM_ARCH "x64" CACHE STRING "" FORCE)
+   ```
+
+  See the releases here: <https://github.com/bblanchon/pdfium-binaries/releases>
 
 ## Examples
 
@@ -186,4 +204,4 @@ Encryption using RC4-40, RC4-128, AES-128, and AES-256 is fully supported using 
 This library also provides SHA1 or SHA-256 Digital Signature using your x509 certificate. The graphic signature is represented by a clickable widget that shows Digital Signature information.
 It implememts a PDF parser to load an existing document and add pages, change pages, and add a signature.
 
-Drop me an email for availability and more information.
+More information here: <https://pub.nfet.net/pdf_crypto/>

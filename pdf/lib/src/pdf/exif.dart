@@ -17,18 +17,21 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'image.dart';
+import 'obj/image.dart';
 
 /// Jpeg metadata extraction
 class PdfJpegInfo {
   /// Load a Jpeg image's metadata
   factory PdfJpegInfo(Uint8List image) {
-    final buffer = image.buffer.asByteData();
+    final buffer = image.buffer.asByteData(
+      image.offsetInBytes,
+      image.lengthInBytes,
+    );
 
     int? width;
     int? height;
     int? color;
-    var offset = image.offsetInBytes;
+    var offset = 0;
     while (offset < buffer.lengthInBytes) {
       while (buffer.getUint8(offset) == 0xff) {
         offset++;
@@ -109,7 +112,12 @@ class PdfJpegInfo {
     }
 
     try {
-      return PdfImageOrientation.values[tags![PdfExifTag.Orientation] - 1];
+      final int index = tags![PdfExifTag.Orientation] - 1;
+      const orientations = PdfImageOrientation.values;
+      if (index >= 0 && index < orientations.length) {
+        return orientations[index];
+      }
+      return PdfImageOrientation.topLeft;
     } on RangeError {
       return PdfImageOrientation.topLeft;
     }

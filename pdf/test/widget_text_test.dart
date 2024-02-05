@@ -24,15 +24,16 @@ import 'package:test/test.dart';
 import 'utils.dart';
 
 late Document pdf;
-Font? ttf;
-Font? ttfBold;
-Font? asian;
+late Font ttf;
+late Font ttfBold;
+late Font asian;
+late Font emoji;
 
 Iterable<TextDecoration> permute(
     List<TextDecoration> prefix, List<TextDecoration> remaining) sync* {
   yield TextDecoration.combine(prefix);
   if (remaining.isNotEmpty) {
-    for (var decoration in remaining) {
+    for (final decoration in remaining) {
       final next = List<TextDecoration>.from(remaining);
       next.remove(decoration);
       yield* permute(prefix + <TextDecoration>[decoration], next);
@@ -48,6 +49,7 @@ void main() {
     ttf = loadFont('open-sans.ttf');
     ttfBold = loadFont('open-sans-bold.ttf');
     asian = loadFont('genyomintw.ttf');
+    emoji = loadFont('emoji.ttf');
     pdf = Document();
   });
 
@@ -99,7 +101,7 @@ void main() {
     final para = LoremText().paragraph(40);
 
     final widgets = <Widget>[];
-    for (var align in TextAlign.values) {
+    for (final align in TextAlign.values) {
       widgets.add(
         Text(
           '$align:\n' + para,
@@ -191,8 +193,8 @@ void main() {
       ),
     );
 
-    for (var decorationStyle in TextDecorationStyle.values) {
-      for (var decoration in decorationSet) {
+    for (final decorationStyle in TextDecorationStyle.values) {
+      for (final decoration in decorationSet) {
         widgets.add(
           Text(
             decoration.toString().replaceAll('.', ' '),
@@ -217,10 +219,10 @@ void main() {
     final para = LoremText(random: rnd).paragraph(40);
 
     final spans = <TextSpan>[];
-    for (var word in para.split(' ')) {
+    for (final word in para.split(' ')) {
       spans.add(
         TextSpan(
-          text: '$word',
+          text: word,
           style: TextStyle(
               font: ttf,
               fontSize: rnd.nextDouble() * 20 + 20,
@@ -336,6 +338,37 @@ void main() {
             ),
           ),
         ],
+      ),
+    );
+  });
+
+  test('Text Widgets Justify multiple paragraphs', () {
+    const para =
+        'This is the first paragraph with a small nice text.\nHere is a new line.\nAnother one.\nAnd finally a long paragraph to finish this test with a three lines text that finishes well.';
+
+    pdf.addPage(
+      Page(
+        build: (Context context) => SizedBox(
+          width: 200,
+          child: Text(
+            para,
+            textAlign: TextAlign.justify,
+          ),
+        ),
+      ),
+    );
+  });
+
+  test('Text Widgets Emojis', () {
+    pdf.addPage(
+      Page(
+        build: (Context context) => Text(
+          'Hello 🐈! Dancing 💃🏃',
+          style: TextStyle(
+            fontSize: 30,
+            fontFallback: [emoji],
+          ),
+        ),
       ),
     );
   });

@@ -18,7 +18,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show Rect, Offset;
 import 'package:pdf/pdf.dart';
 
 import 'callback.dart';
@@ -36,11 +35,16 @@ mixin Printing {
   /// returns a future with a `bool` set to true if the document is printed
   /// and false if it is canceled.
   /// throws an exception in case of error
+  ///
+  /// Set [usePrinterSettings] to true to use the configuration defined by
+  /// the printer. May not work for all the printers and can depend on the
+  /// drivers. (Supported platforms: Windows)
   static Future<bool> layoutPdf({
     required LayoutCallback onLayout,
     String name = 'Document',
     PdfPageFormat format = PdfPageFormat.standard,
     bool dynamicLayout = true,
+    bool usePrinterSettings = false,
   }) {
     return PrintingPlatform.instance.layoutPdf(
       null,
@@ -48,6 +52,7 @@ mixin Printing {
       name,
       format,
       dynamicLayout,
+      usePrinterSettings,
     );
   }
 
@@ -119,12 +124,17 @@ mixin Printing {
   ///
   /// This is not supported on all platforms. Check the result of [info] to
   /// find at runtime if this feature is available or not.
+  ///
+  /// Set [usePrinterSettings] to true to use the configuration defined by
+  /// the printer. May not work for all the printers and can depend on the
+  /// drivers. (Supported platforms: Windows)
   static FutureOr<bool> directPrintPdf({
     required Printer printer,
     required LayoutCallback onLayout,
     String name = 'Document',
     PdfPageFormat format = PdfPageFormat.standard,
     bool dynamicLayout = true,
+    bool usePrinterSettings = false,
   }) {
     return PrintingPlatform.instance.layoutPdf(
       printer,
@@ -132,6 +142,7 @@ mixin Printing {
       name,
       format,
       dynamicLayout,
+      usePrinterSettings,
     );
   }
 

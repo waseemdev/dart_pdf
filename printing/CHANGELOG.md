@@ -1,8 +1,117 @@
 # Changelog
 
-## 5.5.1
+## 5.9.3
 
-- Fix typo in README.
+- Add an option to shrinkwrap preview and set scrollablePhysics [Damian Bast]
+- Resolve driver compatibility issues on Windows [Alban]
+
+## 5.9.2
+
+- Added mounted check for setState in printing>preview>raster [Julius Alibrown]
+- Added showsCopies option to print panel [Benjamin Kraatz]
+- Support latest version of package:ffi [Xavier Hainaux]
+- Update Pdfium to version 5200
+
+## 5.9.1
+
+- iOS: Set cutLength to be currentSize.height [Liam Downey]
+- Add Flutter 3 warning workaround
+- Improve PdfPreview memory consumption
+- Clean up memory usage when using pdf.js [Garrett]
+- Specify the device's temp folder on Android [Álvaro Claro]
+
+## 5.9.0
+
+- Typo: change "DownloadbleFont" to "DownloadableFont"
+- Remove default .pdf extension added to the Android printJob
+
+## 5.8.0
+
+- PdfPreview supports generic Widgets as actions
+
+## 5.7.5
+
+- Update SWIFT code formatter to version 5
+- Fix Xcode 13.3 out of memory issue
+
+## 5.7.4
+
+- Fix orientation not changing
+- Fix compilation issues with Swift 6 [Cedric Tegenkamp]
+
+## 5.7.3
+
+- Fix crash when Android load a PDF file which had password
+- Fix PdfPreview page format and orientation updates
+- Update Pdfium version to 4929
+- Automatic pdf.js library loading
+
+## 5.7.2
+
+- Fix dispose state issue
+- Add onPageFormatChanged event
+- Fix raster quality on Android
+- Use a CDN for emoji and cupertino fonts
+- Improved Android rendering
+- Add dpi attribute to PdfPreview
+
+## 5.7.1
+
+- Update Google Fonts, fixes documentation issues
+
+## 5.7.0
+
+- Fix imports for Dart 2.15
+- Fix print dialog crash on Linux
+- Fix directPrint printer selection on macOS
+- Fix AssetManifest
+- Update Google Fonts
+- Add a default theme initializer
+- Use RENDER_MODE_FOR_DISPLAY on Android
+- Enable usage of printer's settings on Windows [Alban Lecuivre]
+- Update android projects (mavenCentral, compileSdkVersion 30, gradle:4.1.0)
+- Use syscall(SYS_memfd_create) instead of glibc function memfd_create [Obezyan]
+- Fix directPrint issue with iOS 15
+- Improve PdfPreview actions
+
+## 5.6.6
+
+- Update dependencies
+
+## 3.6.5
+
+- Update README
+
+## 5.6.4
+
+- Fix Windows initial page format
+
+## 5.6.3
+
+- Fix Windows string encoding
+- Fix Windows print margins
+- Fix macOS printing
+
+## 5.6.2
+
+- Update Linux and Windows pdfium libraries to 4706
+- Remove extra scroll bars on desktop [Jonathan Salmon]
+
+## 5.6.1
+
+- Allow host app to override pdfium version [Jon Salmon]
+
+## 5.6.0
+
+- Update Google fonts
+- Fix typo in README
+- Fix iOS build warning
+- Fix pdfium memory leak
+- Fix error while loading shared libraries on Linux
+- Update pdfium library to 4627
+- Apply Flutter 2.5 coding style
+- Add WidgetWraper.fromWidget()
+- Allow overriding defaultCache
 
 ## 5.5.0
 

@@ -16,8 +16,7 @@
 
 import 'dart:math' as math;
 
-import 'package:pdf/pdf.dart';
-
+import '../../../pdf.dart';
 import '../flex.dart';
 import '../geometry.dart';
 import '../widget.dart';
@@ -105,17 +104,21 @@ class CartesianGrid extends ChartGrid {
     final datasets = Chart.of(context).datasets;
 
     clip(context, box!.size);
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       dataSet.paintBackground(context);
     }
     context.canvas.restoreContext();
     paintBackground(context);
     clip(context, box!.size);
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       dataSet.paint(context);
     }
     context.canvas.restoreContext();
     _xAxis.paint(context);
     _yAxis.paint(context);
+
+    for (final dataSet in datasets) {
+      dataSet.paintForeground(context);
+    }
   }
 }

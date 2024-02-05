@@ -16,8 +16,7 @@
 
 import 'dart:math' as math;
 
-import 'package:pdf/pdf.dart';
-
+import '../../pdf.dart';
 import 'annotations.dart';
 import 'basic.dart';
 import 'box_border.dart';
@@ -144,7 +143,7 @@ class TableOfContent extends StatelessWidget {
             child: Row(
               children: [
                 SizedBox(width: 10.0 * l),
-                Text('${c.title}'),
+                Text(c.title!),
                 SizedBox(width: 8),
                 Expanded(
                     child: Divider(
@@ -152,7 +151,7 @@ class TableOfContent extends StatelessWidget {
                   thickness: 0.2,
                 )),
                 SizedBox(width: 8),
-                Text('${c.page}'),
+                DelayedWidget(build: (_) => Text('${c.page}')),
               ],
             ),
           ),

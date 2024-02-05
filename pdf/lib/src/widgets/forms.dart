@@ -16,10 +16,10 @@
 
 import 'dart:typed_data';
 
-import 'package:pdf/pdf.dart';
-import 'package:pdf/src/pdf/data_types.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
+import '../priv.dart';
 import 'basic.dart';
 import 'border_radius.dart';
 import 'box_border.dart';
@@ -278,7 +278,7 @@ class TextField extends StatelessWidget {
       fieldFlags: fieldFlags,
       value: value,
       defaultValue: defaultValue,
-      font: _textStyle.font!.getFont(context)!,
+      font: _textStyle.font!.getFont(context),
       fontSize: _textStyle.fontSize!,
       textColor: _textStyle.color!,
     );

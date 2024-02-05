@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-import 'catalog.dart';
 import 'data_types.dart';
 import 'document.dart';
-import 'encryption.dart';
-import 'info.dart';
-import 'object.dart';
-import 'signature.dart';
+import 'obj/catalog.dart';
+import 'obj/diagnostic.dart';
+import 'obj/encryption.dart';
+import 'obj/info.dart';
+import 'obj/object.dart';
+import 'obj/signature.dart';
 import 'stream.dart';
 import 'xref.dart';
 
 /// PDF document writer
-class PdfOutput {
+class PdfOutput with PdfDiagnostic {
   /// This creates a Pdf [PdfStream]
-  PdfOutput(this.os, this.version) {
+  PdfOutput(this.os, this.version, this.verbose) {
     String v;
     switch (version) {
       case PdfVersion.pdf_1_4:
@@ -40,6 +41,16 @@ class PdfOutput {
 
     os.putString('%PDF-$v\n');
     os.putBytes(const <int>[0x25, 0xC2, 0xA5, 0xC2, 0xB1, 0xC3, 0xAB, 0x0A]);
+    assert(() {
+      if (verbose) {
+        setInsertion(os);
+        startStopwatch();
+        debugFill('Verbose dart_pdf');
+        debugFill('Producer https://github.com/DavBfr/dart_pdf');
+        debugFill('Creation date: ${DateTime.now()}');
+      }
+      return true;
+    }());
   }
 
   /// Pdf version to output
@@ -66,6 +77,9 @@ class PdfOutput {
   /// Generate a compressed cross reference table
   bool get isCompressed => version.index > PdfVersion.pdf_1_4.index;
 
+  /// Verbose output
+  final bool verbose;
+
   /// This method writes a [PdfObject] to the stream.
   void write(PdfObject ob) {
     // Check the object to see if it's one that is needed later
@@ -81,7 +95,23 @@ class PdfOutput {
     }
 
     xref.add(PdfXref(ob.objser, os.offset));
+    assert(() {
+      if (verbose) {
+        ob.setInsertion(os);
+        ob.startStopwatch();
+      }
+      return true;
+    }());
     ob.write(os);
+    assert(() {
+      if (verbose) {
+        ob.stopStopwatch();
+        ob.debugFill(
+            'Creation time: ${ob.elapsedStopwatch / Duration.microsecondsPerSecond} seconds');
+        ob.writeDebug(os);
+      }
+      return true;
+    }());
   }
 
   /// This closes the Stream, writing the xref table
@@ -119,18 +149,51 @@ class PdfOutput {
     if (isCompressed) {
       xref.outputCompressed(rootID!, os, params);
     } else {
+      assert(() {
+        if (verbose) {
+          os.putComment('');
+          os.putComment('-' * 78);
+        }
+        return true;
+      }());
       xref.output(os);
-    }
 
-    if (!isCompressed) {
       // the trailer object
+      assert(() {
+        if (verbose) {
+          os.putComment('');
+          os.putComment('-' * 78);
+        }
+        return true;
+      }());
       os.putString('trailer\n');
-      params.output(os);
+      params.output(os, verbose ? 0 : null);
       os.putByte(0x0a);
     }
 
+    assert(() {
+      if (verbose) {
+        os.putComment('');
+        os.putComment('-' * 78);
+      }
+      return true;
+    }());
+
     // the reference to the xref object
     os.putString('startxref\n$_xref\n%%EOF\n');
+
+    assert(() {
+      if (verbose) {
+        stopStopwatch();
+        debugFill(
+            'Creation time: ${elapsedStopwatch / Duration.microsecondsPerSecond} seconds');
+        debugFill('File size: ${os.offset} bytes');
+        debugFill('Pages: ${rootID!.pdfDocument.pdfPageList.pages.length}');
+        debugFill('Objects: ${xref.offsets.length}');
+        writeDebug(os);
+      }
+      return true;
+    }());
 
     if (signatureID != null) {
       await signatureID!.writeSignature(os);

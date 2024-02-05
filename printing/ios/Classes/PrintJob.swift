@@ -31,7 +31,8 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
     private var orientation: UIPrintInfo.Orientation?
     private let semaphore = DispatchSemaphore(value: 0)
     private var dynamic = false
-
+    private var currentSize: CGSize?
+    
     public init(printing: PrintingPlugin, index: Int) {
         self.printing = printing
         self.index = index
@@ -70,20 +71,20 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
             return
         }
 
-        let controller = UIPrintInteractionController.shared
-        controller.delegate = self
+        DispatchQueue.main.async { [self] in
+            let controller = UIPrintInteractionController.shared
+            controller.delegate = self
 
-        let printInfo = UIPrintInfo.printInfo()
-        printInfo.jobName = jobName!
-        printInfo.outputType = .general
-        if orientation != nil {
-            printInfo.orientation = orientation!
-            orientation = nil
-        }
-        controller.printInfo = printInfo
-        controller.printPageRenderer = self
+            let printInfo = UIPrintInfo.printInfo()
+            printInfo.jobName = jobName!
+            printInfo.outputType = .general
+            if orientation != nil {
+                printInfo.orientation = orientation!
+                orientation = nil
+            }
+            controller.printInfo = printInfo
+            controller.printPageRenderer = self
 
-        DispatchQueue.main.async {
             if self.printerName != nil {
                 let printerURL = URL(string: self.printerName!)
 
@@ -93,7 +94,14 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
                 }
 
                 let printer = UIPrinter(url: printerURL!)
-                controller.print(to: printer, completionHandler: self.completionHandler)
+                printer.contactPrinter { available in
+                    if !available {
+                        self.printing.onCompleted(printJob: self, completed: false, error: "Printer not available")
+                        return
+                    }
+
+                    controller.print(to: printer, completionHandler: self.completionHandler)
+                }
             } else {
                 controller.present(animated: true, completionHandler: self.completionHandler)
             }
@@ -127,7 +135,17 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
         printing.onCompleted(printJob: self, completed: completed, error: error?.localizedDescription as NSString?)
     }
 
+    public func printInteractionController(_ printInteractionController: UIPrintInteractionController, cutLengthFor paper: UIPrintPaper) -> CGFloat {
+        if currentSize == nil{
+            return  paper.paperSize.height
+        }
+
+        return currentSize!.height
+       
+    }
+    
     func printPdf(name: String, withPageSize size: CGSize, andMargin margin: CGRect, withPrinter printerID: String?, dynamically dyn: Bool) {
+        currentSize = size
         dynamic = dyn
         let printing = UIPrintInteractionController.isPrintingAvailable
         if !printing {
@@ -197,9 +215,9 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
             return
         }
 
-        let activityViewController = UIActivityViewController(activityItems: [fileURL, body], applicationActivities: nil)
+        let activityViewController = UIActivityViewController(activityItems: [fileURL, body as Any], applicationActivities: nil)
         activityViewController.setValue(subject, forKey: "subject")
-        if UI_USER_INTERFACE_IDIOM() == .pad {
+        if UIDevice.current.userInterfaceIdiom == .pad {
             let controller: UIViewController? = UIApplication.shared.keyWindow?.rootViewController
             activityViewController.popoverPresentationController?.sourceView = controller?.view
             activityViewController.popoverPresentationController?.sourceRect = rect
@@ -262,28 +280,28 @@ public class PrintJob: UIPrintPageRenderer, UIPrintInteractionControllerDelegate
 
         let pickPrinterCompletionHandler: UIPrinterPickerController.CompletionHandler = {
             (printerPickerController: UIPrinterPickerController, completed: Bool, error: Error?) in
-            if !completed, error != nil {
-                print("Unable to pick printer: \(error?.localizedDescription ?? "unknown error")")
-                result(nil)
-                return
-            }
+                if !completed, error != nil {
+                    print("Unable to pick printer: \(error?.localizedDescription ?? "unknown error")")
+                    result(nil)
+                    return
+                }
 
-            if printerPickerController.selectedPrinter == nil {
-                result(nil)
-                return
-            }
+                if printerPickerController.selectedPrinter == nil {
+                    result(nil)
+                    return
+                }
 
-            let printer = printerPickerController.selectedPrinter!
-            let data: NSDictionary = [
-                "url": printer.url.absoluteString as Any,
-                "name": printer.displayName as Any,
-                "model": printer.makeAndModel as Any,
-                "location": printer.displayLocation as Any,
-            ]
-            result(data)
+                let printer = printerPickerController.selectedPrinter!
+                let data: NSDictionary = [
+                    "url": printer.url.absoluteString as Any,
+                    "name": printer.displayName as Any,
+                    "model": printer.makeAndModel as Any,
+                    "location": printer.displayLocation as Any,
+                ]
+                result(data)
         }
 
-        if UI_USER_INTERFACE_IDIOM() == .pad {
+        if UIDevice.current.userInterfaceIdiom == .pad {
             let viewController: UIViewController? = UIApplication.shared.keyWindow?.rootViewController
             if viewController != nil {
                 controller.present(from: rect, in: viewController!.view, animated: true, completionHandler: pickPrinterCompletionHandler)

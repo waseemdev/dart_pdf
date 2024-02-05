@@ -24,6 +24,7 @@ import 'dart:typed_data';
 
 import 'package:js/js.dart';
 
+// ignore: avoid_classes_with_only_static_members
 @JS('pdfjsLib')
 class PdfJs {
   external static PdfJsDocLoader getDocument(Settings data);
@@ -42,6 +43,7 @@ class Settings {
 @JS()
 class PdfJsDocLoader {
   external Future<PdfJsDoc> get promise;
+  external Future<void> destroy();
 }
 
 @anonymous
@@ -56,6 +58,7 @@ class PdfJsDoc {
 class PdfJsPage {
   external PdfJsViewport getViewport(Settings data);
   external PdfJsRender render(Settings data);
+  external bool cleanup();
 }
 
 @anonymous

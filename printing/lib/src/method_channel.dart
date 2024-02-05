@@ -152,7 +152,12 @@ class MethodChannelPrinting extends PrintingPlatform {
         <String, dynamic>{},
       );
     } catch (e) {
-      print('Error getting printing info: $e');
+      assert(() {
+        // ignore: avoid_print
+        print('Error getting printing info: $e');
+        return true;
+      }());
+
       return PrintingInfo.unavailable;
     }
 
@@ -166,6 +171,7 @@ class MethodChannelPrinting extends PrintingPlatform {
     String name,
     PdfPageFormat format,
     bool dynamicLayout,
+    bool usePrinterSettings,
   ) async {
     final job = _printJobs.add(
       onCompleted: Completer<bool>(),
@@ -183,6 +189,7 @@ class MethodChannelPrinting extends PrintingPlatform {
       'marginRight': format.marginRight,
       'marginBottom': format.marginBottom,
       'dynamic': dynamicLayout,
+      'usePrinterSettings': usePrinterSettings,
     };
 
     await _channel.invokeMethod<int>('printPdf', params);

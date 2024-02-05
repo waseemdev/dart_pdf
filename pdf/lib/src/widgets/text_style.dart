@@ -15,8 +15,8 @@
  */
 
 import 'package:meta/meta.dart';
-import 'package:pdf/pdf.dart';
 
+import '../../pdf.dart';
 import 'decoration.dart';
 import 'font.dart';
 import 'text.dart';
@@ -35,7 +35,7 @@ class TextDecoration {
   /// Creates a decoration that paints the union of all the given decorations.
   factory TextDecoration.combine(List<TextDecoration> decorations) {
     var mask = 0;
-    for (var decoration in decorations) {
+    for (final decoration in decorations) {
       mask |= decoration._mask;
     }
     return TextDecoration._(mask);
@@ -111,6 +111,7 @@ class TextStyle {
     Font? fontBold,
     Font? fontItalic,
     Font? fontBoldItalic,
+    this.fontFallback = const [],
     this.fontSize,
     this.fontWeight,
     this.fontStyle,
@@ -165,6 +166,7 @@ class TextStyle {
       fontBold: Font.helveticaBold(),
       fontItalic: Font.helveticaOblique(),
       fontBoldItalic: Font.helveticaBoldOblique(),
+      fontFallback: const [],
       fontSize: _defaultFontSize,
       fontWeight: FontWeight.normal,
       fontStyle: FontStyle.normal,
@@ -192,7 +194,10 @@ class TextStyle {
 
   final Font? fontBoldItalic;
 
-  // font height, in pdf unit
+  /// The ordered list of font to fall back on when a glyph cannot be found in a higher priority font.
+  final List<Font> fontFallback;
+
+  /// font height, in pdf unit
   final double? fontSize;
 
   /// The typeface thickness to use when painting the text (e.g., bold).
@@ -233,6 +238,7 @@ class TextStyle {
     Font? fontBold,
     Font? fontItalic,
     Font? fontBoldItalic,
+    List<Font>? fontFallback,
     double? fontSize,
     FontWeight? fontWeight,
     FontStyle? fontStyle,
@@ -255,6 +261,7 @@ class TextStyle {
       fontBold: fontBold ?? this.fontBold,
       fontItalic: fontItalic ?? this.fontItalic,
       fontBoldItalic: fontBoldItalic ?? this.fontBoldItalic,
+      fontFallback: fontFallback ?? this.fontFallback,
       fontSize: fontSize ?? this.fontSize,
       fontWeight: fontWeight ?? this.fontWeight,
       fontStyle: fontStyle ?? this.fontStyle,
@@ -339,6 +346,7 @@ class TextStyle {
       fontBold: other.fontBold,
       fontItalic: other.fontItalic,
       fontBoldItalic: other.fontBoldItalic,
+      fontFallback: [...other.fontFallback, ...fontFallback],
       fontSize: other.fontSize,
       fontWeight: other.fontWeight,
       fontStyle: other.fontStyle,

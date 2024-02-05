@@ -1,8 +1,101 @@
 # Changelog
 
+## 3.8.4
+
+- Improve Multi-Page layout
+
+## 3.8.3
+
+- Fix Arabic TextAlign.justify issues Set default text align based on text direction [Milad akarie]
+- Bump barcode dependency to 2.2.3
+
+## 3.8.2
+
+- Fix Compressed Cross-Reference ID
+- Fix exif orientation [deepak786]
+- Remove debug print statements
+
+## 3.8.1
+
+- Fix large PDF generation on web with compressed xref
+- Fix RangeError Exception When MultiPage Wraps Across Pages [scottdewald]
+- Add headerCellDecoration to Table.fromTextArray [Enrique Cardona]
+
+## 3.8.0
+
+- Update xml dependency range
+- Implement PointDataSet for Chart
+- Implement PdfPageLabels
+- Typo: rename "litteral" with "literal"
+- Fix tabs and other spaces placeholder
+- Prevent modifying the document once saved
+- Improve Table Of Content
+
+## 3.7.4
+
+- Fix Bidirectional text (Arabic + Latin words) order and line breakers issue #990 [Milad]
+
+## 3.7.3
+
+- Fix missing endobj with compressed xref
+- Fix missing smask subtype
+- Add missing final "~>" to Ascii85 encoder
+- Fix typo "horizontalCenter"
+- Add OverflowBox
+
+## 3.7.2
+
+- Improve debugging information
+- Fix parsing TTF fonts with zero-length glyphs
+
+## 3.7.1
+
+- Fix missing chars with pdfjs
+
+## 3.7.0
+
+- Fix imports for Dart 2.15
+- Fix TTF font parser for NewsCycle-Regular.ttf
+- Move files
+- Depreciate Font.stringSize
+- Implement fallback font
+- Implement Emoji support
+- Improve outlines containing non-sequential level increments [Roel Spilker]
+- Add debugging information
+
+## 3.6.5
+
+- Update dependencies
+
+## 3.6.4
+
+- Update README
+
+## 3.6.3
+
+- Fix some Spanning Widgets issues
+- Fix Arabic unit tests
+
+## 3.6.2
+
+- Fix arabic ranges according to Wikipedia [elibyy]
+
+## 3.6.1
+
+- Fixes crash when array is empty [Kondamon]
+- Fix arabic word issues [Mohamedfaroouk]
+
+## 3.6.0
+
+- Fix text justify with multiple paragraphs
+- Apply Flutter 2.5 coding style
+- Prefere unicode FontName
+
 ## 3.5.0
 
 - Add annotations [John Harris]
+- Improve image decoding error messages
+- Fix Exif decoding
 
 ## 3.4.2
 
@@ -88,7 +181,7 @@
 - A borderRadius can only be given for a uniform Border
 - Add LayoutWidgetBuilder
 - Add GridPaper widget
-- Improve internal sructure
+- Improve internal structure
 - Add some asserts on the TtfParser
 - Add document loading
 - Remove deprecated methods
@@ -100,7 +193,7 @@
 
 ## 1.13.0
 
-- Implement different border radius on all corners
+- Implement different border-radius on all corners
 - Add AcroForm widgets
 - Add document outline support
 - Update analysis options
@@ -113,7 +206,7 @@
 - Automatically calculate Shape() bounding box
 - Improve gradient functions
 - Add blend mode
-- Add soft mask
+- Add soft-mask support
 - Remove dependency to the deprecated utf library
 - Fix RichText.maxLines with multiple TextSpan
 - Fix Exif parsing
@@ -154,7 +247,7 @@
 
 ## 1.9.0
 
-- Allow MultiPage to relayout individual pages with support for flex
+- Allow MultiPage to re-layout individual pages with support for flex
 - Implement BoxShadow for rect and circle BoxDecorations
 - Implement TextStyle.letterSpacing
 - Implement Arabic writing support [Anas Altair]

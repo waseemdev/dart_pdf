@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:pdf/src/pdf/stream.dart';
-
 import 'data_types.dart';
-import 'object.dart';
+import 'obj/object.dart';
+import 'stream.dart';
 
-enum PdfCrossRefEntryType { free, inUse }
+enum PdfCrossRefEntryType { free, inUse, compressed }
 
 /// Cross-reference for a Pdf Object
 class PdfXref {
@@ -30,6 +30,7 @@ class PdfXref {
     this.id,
     this.offset, {
     this.generation = 0,
+    this.object,
     this.type = PdfCrossRefEntryType.inUse,
   });
 
@@ -38,6 +39,9 @@ class PdfXref {
 
   /// The offset within the Pdf file
   final int offset;
+
+  /// The object ID containing this compressed object
+  final int? object;
 
   /// The generation of the object, usually 0
   final int generation;
@@ -51,6 +55,8 @@ class PdfXref {
         generation.toString().padLeft(5, '0') +
         (type == PdfCrossRefEntryType.inUse ? ' n ' : ' f ');
   }
+
+  PdfIndirect? get container => object == null ? null : PdfIndirect(object!, 0);
 
   /// The xref in the format of the compressed xref section in the Pdf file
   int cref(ByteData o, int ofs, List<int> w) {
@@ -101,14 +107,14 @@ class PdfXrefTable extends PdfDataType {
   void _writeblock(PdfStream s, int firstid, List<PdfXref> block) {
     s.putString('$firstid ${block.length}\n');
 
-    for (var x in block) {
+    for (final x in block) {
       s.putString(x.ref());
       s.putByte(0x0a);
     }
   }
 
   @override
-  void output(PdfStream s) {
+  void output(PdfStream s, [int? indent]) {
     s.putString('xref\n');
 
     // Now scan through the offsets list. They should be in sequence.
@@ -126,7 +132,7 @@ class PdfXrefTable extends PdfDataType {
       type: PdfCrossRefEntryType.free,
     ));
 
-    for (var x in offsets) {
+    for (final x in offsets) {
       // check to see if block is in range
       if (x.id != (lastid + 1)) {
         // no, so write this block, and reset
@@ -146,15 +152,14 @@ class PdfXrefTable extends PdfDataType {
 
   /// Output a compressed cross-reference table
   void outputCompressed(PdfObject object, PdfStream s, PdfDict params) {
-    // Write this object too
-    final id = offsets.last.id + 1;
     final offset = s.offset;
-    offsets.add(PdfXref(id, offset));
 
     // Sort all references
     offsets.sort((a, b) => a.id.compareTo(b.id));
 
-    s.putString('$id 0 obj\n');
+    // Write this object too
+    final id = offsets.last.id + 1;
+    offsets.add(PdfXref(id, offset));
 
     params['/Type'] = const PdfName('/XRef');
     params['/Size'] = PdfNum(id + 1);
@@ -166,7 +171,7 @@ class PdfXrefTable extends PdfDataType {
     // We need block 0 to exist
     blocks.add(firstid);
 
-    for (var x in offsets) {
+    for (final x in offsets) {
       // check to see if block is in range
       if (x.id != (lastid + 1)) {
         // no, so store this block, and reset
@@ -182,11 +187,7 @@ class PdfXrefTable extends PdfDataType {
       params['/Index'] = PdfArray.fromNum(blocks);
     }
 
-    var bytes = 2; // A pdf less than 256 bytes is unlikely
-    while (1 << (bytes * 8) < offset) {
-      bytes++;
-    }
-
+    final bytes = ((math.log(offset) / math.ln2).ceil() / 8).ceil();
     final w = [1, bytes, 1];
     params['/W'] = PdfArray.fromNum(w);
     final wl = w.reduce((a, b) => a + b);
@@ -196,17 +197,29 @@ class PdfXrefTable extends PdfDataType {
     // Write offset zero, all zeros
     ofs += wl;
 
-    for (var x in offsets) {
+    for (final x in offsets) {
       ofs = x.cref(o, ofs, w);
     }
 
     // Write the object
+    assert(() {
+      if (object.pdfDocument.verbose) {
+        s.putComment('');
+        s.putComment('-' * 78);
+        s.putComment('$runtimeType $this');
+      }
+      return true;
+    }());
+    s.putString('$id 0 obj\n');
+
     PdfDictStream(
       object: object,
       data: o.buffer.asUint8List(),
       isBinary: false,
       encrypt: false,
       values: params.values,
-    ).output(s);
+    ).output(s, object.pdfDocument.verbose ? 0 : null);
+
+    s.putString('endobj\n');
   }
 }

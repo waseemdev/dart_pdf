@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import 'package:pdf/pdf.dart';
-import 'package:pdf/src/svg/color.dart';
-import 'package:pdf/widgets.dart';
-
+import '../../pdf.dart';
+import '../widgets/font.dart';
 import 'brush.dart';
+import 'color.dart';
 import 'group.dart';
 import 'parser.dart';
 

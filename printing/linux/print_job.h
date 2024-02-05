@@ -28,10 +28,12 @@
 class print_job {
  private:
   const int index;
-  GtkPrintJob* printJob;
+  GtkPrintJob* printJob = nullptr;
 
  public:
-  print_job(int index);
+  GtkPrintUnixDialog* dialog = nullptr;
+
+  explicit print_job(int index);
 
   ~print_job();
 

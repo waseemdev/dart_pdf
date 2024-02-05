@@ -17,8 +17,8 @@
 import 'dart:math' as math;
 
 import 'package:meta/meta.dart';
-import 'package:pdf/pdf.dart';
 
+import '../../../pdf.dart';
 import '../geometry.dart';
 import '../widget.dart';
 import 'chart.dart';
@@ -69,13 +69,13 @@ class RadialGrid extends ChartGrid {
     final datasets = Chart.of(context).datasets;
 
     clip(context, box!.size);
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       dataSet.paintBackground(context);
     }
     context.canvas.restoreContext();
     paintBackground(context);
     clip(context, box!.size);
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       dataSet.paint(context);
     }
     context.canvas.restoreContext();

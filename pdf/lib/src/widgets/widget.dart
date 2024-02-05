@@ -18,12 +18,12 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:meta/meta.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
 import 'document.dart';
 import 'geometry.dart';
+import 'multi_page.dart';
 import 'page.dart';
 import 'theme.dart';
 
@@ -62,7 +62,16 @@ class Context {
 
   final PdfDocument document;
 
-  int get pageNumber => document.pdfPageList.pages.indexOf(page) + 1;
+  int get _pageNumber => document.pdfPageList.pages.indexOf(page);
+
+  int get pageNumber => _pageNumber + 1;
+
+  String get pageLabel => document.catalog.pageLabels == null
+      ? pageNumber.toString()
+      : document.pageLabels.pageLabel(_pageNumber);
+
+  set pageLabel(String value) =>
+      document.pageLabels.labels[_pageNumber] = PdfPageLabel(value);
 
   /// Number of pages in the document.
   /// This value is not available in a MultiPage body and will be equal to pageNumber.
@@ -256,7 +265,9 @@ abstract class StatelessWidget extends Widget with SpanningWidget {
 
   @override
   bool get canSpan =>
-      _child is SpanningWidget && (_child as SpanningWidget).canSpan;
+      _child != null &&
+      _child is SpanningWidget &&
+      (_child as SpanningWidget).canSpan;
 
   @override
   bool get hasMoreWidgets =>
@@ -367,5 +378,39 @@ class InheritedWidget extends SingleChildWidget {
     assert(_context != null);
     super.paint(_context!);
     paintChild(_context!);
+  }
+}
+
+class DelayedWidget extends SingleChildWidget {
+  DelayedWidget({required this.build}) : super();
+
+  final BuildCallback build;
+
+  @override
+  Widget? get child => _child;
+
+  Widget? _child;
+
+  @override
+  void layout(Context context, BoxConstraints constraints,
+      {bool parentUsesSize = false}) {
+    _child = build(context);
+    super.layout(context, constraints);
+  }
+
+  void delayedPaint(Context context) {
+    _child = build(context);
+    child!.layout(
+      context,
+      BoxConstraints.tight(box!.size),
+      parentUsesSize: false,
+    );
+    paintChild(context);
+  }
+
+  @override
+  void paint(Context context) {
+    delayedPaint(context);
+    super.paint(context);
   }
 }

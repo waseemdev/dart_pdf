@@ -3,9 +3,10 @@
 import 'dart:math';
 
 import 'package:meta/meta.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart';
 import 'package:vector_math/vector_math_64.dart';
+
+import '../../../pdf.dart';
+import '../../../widgets.dart';
 
 class PieGrid extends ChartGrid {
   PieGrid({this.startAngle = 0});
@@ -88,19 +89,19 @@ class PieGrid extends ChartGrid {
         Matrix4.translationValues(box!.width / 2, box!.height / 2, 0),
       );
 
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       if (dataSet is PieDataSet) {
         dataSet.paintBackground(context);
       }
     }
 
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       if (dataSet is PieDataSet) {
         dataSet.paint(context);
       }
     }
 
-    for (var dataSet in datasets) {
+    for (final dataSet in datasets) {
       if (dataSet is PieDataSet) {
         dataSet.paintLegend(context);
       }

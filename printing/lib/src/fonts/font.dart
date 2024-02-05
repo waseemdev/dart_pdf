@@ -21,9 +21,9 @@ import '../cache.dart';
 import 'manifest.dart';
 
 /// Downloadable font object
-class DownloadbleFont {
+class DownloadableFont {
   /// Create a downloadable font object
-  const DownloadbleFont(this.url, this.name);
+  const DownloadableFont(this.url, this.name);
 
   /// The Url to get the font from
   final String url;
@@ -68,7 +68,12 @@ class DownloadbleFont {
         protect: protect,
       );
     } catch (e) {
-      print('$e\nError loading $name, fallback to Helvetica.');
+      assert(() {
+        // ignore: avoid_print
+        print('$e\nError loading $name, fallback to Helvetica.');
+        return true;
+      }());
+
       return Font.helvetica();
     }
   }

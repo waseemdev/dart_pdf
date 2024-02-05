@@ -45,7 +45,7 @@ Future<Uint8List> generateReport(
       .map((e) => e[2] as num)
       .reduce((value, element) => value + element);
 
-  final baseColor = PdfColors.cyan;
+  const baseColor = PdfColors.cyan;
 
   // Create a PDF document.
   final document = pw.Document();
@@ -96,11 +96,11 @@ Future<Uint8List> generateReport(
         width: 15,
         offset: -10,
         borderColor: baseColor,
-        data: List<pw.LineChartValue>.generate(
+        data: List<pw.PointChartValue>.generate(
           dataTable.length,
           (i) {
             final v = dataTable[i][2] as num;
-            return pw.LineChartValue(i.toDouble(), v.toDouble());
+            return pw.PointChartValue(i.toDouble(), v.toDouble());
           },
         ),
       ),
@@ -110,11 +110,11 @@ Future<Uint8List> generateReport(
         width: 15,
         offset: 10,
         borderColor: PdfColors.amber,
-        data: List<pw.LineChartValue>.generate(
+        data: List<pw.PointChartValue>.generate(
           dataTable.length,
           (i) {
             final v = dataTable[i][1] as num;
-            return pw.LineChartValue(i.toDouble(), v.toDouble());
+            return pw.PointChartValue(i.toDouble(), v.toDouble());
           },
         ),
       ),
@@ -138,11 +138,11 @@ Future<Uint8List> generateReport(
         isCurved: true,
         drawPoints: false,
         color: baseColor,
-        data: List<pw.LineChartValue>.generate(
+        data: List<pw.PointChartValue>.generate(
           dataTable.length,
           (i) {
             final v = dataTable[i][2] as num;
-            return pw.LineChartValue(i.toDouble(), v.toDouble());
+            return pw.PointChartValue(i.toDouble(), v.toDouble());
           },
         ),
       ),
@@ -166,10 +166,10 @@ Future<Uint8List> generateReport(
       color: PdfColors.white,
       fontWeight: pw.FontWeight.bold,
     ),
-    headerDecoration: pw.BoxDecoration(
+    headerDecoration: const pw.BoxDecoration(
       color: baseColor,
     ),
-    rowDecoration: pw.BoxDecoration(
+    rowDecoration: const pw.BoxDecoration(
       border: pw.Border(
         bottom: pw.BorderSide(
           color: baseColor,
@@ -191,7 +191,7 @@ Future<Uint8List> generateReport(
         return pw.Column(
           children: [
             pw.Text('Budget Report',
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                   color: baseColor,
                   fontSize: 40,
                 )),
@@ -210,7 +210,7 @@ Future<Uint8List> generateReport(
                     padding: const pw.EdgeInsets.only(bottom: 10),
                     child: pw.Text(
                       'Expense By Sub-Categories',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         color: baseColor,
                         fontSize: 16,
                       ),
@@ -230,7 +230,7 @@ Future<Uint8List> generateReport(
                         padding: const pw.EdgeInsets.only(bottom: 10),
                         child: pw.Text(
                           'Spent vs. Saved',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             color: baseColor,
                             fontSize: 16,
                           ),
@@ -273,7 +273,7 @@ Future<Uint8List> generateReport(
               child: pw.Chart(
                 title: pw.Text(
                   'Expense breakdown',
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                     color: baseColor,
                     fontSize: 20,
                   ),
@@ -288,7 +288,7 @@ Future<Uint8List> generateReport(
                     legend: '${data[0]}\n$pct%',
                     value: value,
                     color: color,
-                    legendStyle: pw.TextStyle(fontSize: 10),
+                    legendStyle: const pw.TextStyle(fontSize: 10),
                   );
                 }),
               ),

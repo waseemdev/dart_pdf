@@ -424,7 +424,7 @@ public class PrintingJob extends PrintDocumentAdapter {
     void setDocument(byte[] data) {
         documentData = data;
 
-        PrintDocumentInfo info = new PrintDocumentInfo.Builder(jobName + ".pdf")
+        PrintDocumentInfo info = new PrintDocumentInfo.Builder(jobName)
                                          .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
                                          .build();
 
@@ -445,7 +445,8 @@ public class PrintingJob extends PrintDocumentAdapter {
             public void run() {
                 String error = null;
                 try {
-                    File file = File.createTempFile("printing", null, null);
+                    File tempDir = context.getCacheDir();
+                    File file = File.createTempFile("printing", null, tempDir);
                     FileOutputStream oStream = new FileOutputStream(file);
                     oStream.write(data);
                     oStream.close();
@@ -472,7 +473,7 @@ public class PrintingJob extends PrintDocumentAdapter {
                         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 
                         page.render(
-                                bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_PRINT);
+                                bitmap, null, transform, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
 
                         page.close();
 
@@ -498,6 +499,19 @@ public class PrintingJob extends PrintDocumentAdapter {
                 }
 
                 final String finalError = error;
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        printing.onPageRasterEnd(PrintingJob.this, finalError);
+                    }
+                });
+            }
+        });
+
+        thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                final String finalError = e.getMessage();
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {

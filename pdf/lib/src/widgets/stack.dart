@@ -16,9 +16,9 @@
 
 import 'dart:math' as math;
 
-import 'package:pdf/pdf.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
 import 'geometry.dart';
 import 'text.dart';
 import 'widget.dart';
@@ -147,8 +147,8 @@ class Stack extends MultiChildWidget {
         break;
     }
 
-    for (var child in children) {
-      if (!(child is Positioned)) {
+    for (final child in children) {
+      if (child is! Positioned) {
         hasNonPositionedChildren = true;
 
         child.layout(context, nonPositionedConstraints, parentUsesSize: true);
@@ -168,8 +168,8 @@ class Stack extends MultiChildWidget {
       box = PdfRect.fromPoints(PdfPoint.zero, constraints.biggest);
     }
 
-    for (var child in children) {
-      if (!(child is Positioned)) {
+    for (final child in children) {
+      if (child is! Positioned) {
         child.box = PdfRect.fromPoints(
             alignment.inscribe(child.box!.size, box!).offset, child.box!.size);
       } else {
@@ -232,7 +232,7 @@ class Stack extends MultiChildWidget {
         ..drawRect(0, 0, box!.width, box!.height)
         ..clipPath();
     }
-    for (var child in children) {
+    for (final child in children) {
       child.paint(context);
     }
     context.canvas.restoreContext();

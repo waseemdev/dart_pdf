@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import 'package:pdf/pdf.dart';
-
+import '../../../pdf.dart';
 import '../basic.dart';
 import '../container.dart';
 import '../decoration.dart';
@@ -57,7 +56,7 @@ class ChartLegend extends StatelessWidget {
           width: style.fontSize,
           height: style.fontSize,
           margin: const EdgeInsets.only(right: 5),
-          child: dataset.legendShape(),
+          child: dataset.legendShape(context),
         ),
         Text(
           dataset.legend!,

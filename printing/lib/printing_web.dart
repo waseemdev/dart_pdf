@@ -17,44 +17,96 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:html';
-import 'dart:io';
 import 'dart:js' as js;
 import 'dart:js_util';
 import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart' show Rect;
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:image/image.dart' as im;
 import 'package:pdf/pdf.dart';
 
 import 'src/callback.dart';
 import 'src/interface.dart';
+import 'src/mutex.dart';
 import 'src/pdfjs.dart';
 import 'src/printer.dart';
 import 'src/printing_info.dart';
 import 'src/raster.dart';
 
-/// Print plugin targetting Flutter on the Web
+/// Print plugin targeting Flutter on the Web
 class PrintingPlugin extends PrintingPlatform {
   /// Registers this class as the default instance of [PrintingPlugin].
   static void registerWith(Registrar registrar) {
     PrintingPlatform.instance = PrintingPlugin();
   }
 
-  static int _frameNumber = 0;
+  static const String _scriptId = '__net_nfet_printing_s__';
+
+  static const String _frameId = '__net_nfet_printing__';
+
+  static const _pdfJsVersion =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216';
+
+  final _loading = Mutex();
+
+  bool get _hasPdfJsLib => js.context.callMethod('eval', <String>[
+        'typeof pdfjsLib !== "undefined" && pdfjsLib.GlobalWorkerOptions.workerSrc!="";'
+      ]);
+
+  Future<void> _initPlugin() async {
+    await _loading.acquire();
+
+    if (!_hasPdfJsLib) {
+      final script = ScriptElement()
+        ..type = 'text/javascript'
+        ..async = true
+        ..src = '$_pdfJsVersion/pdf.min.js';
+      assert(document.head != null);
+      document.head!.append(script);
+      await script.onLoad.first;
+
+      if (js.context['pdfjsLib'] == null) {
+        // In dev, requireJs is loaded in
+        final require = js.JsObject.fromBrowserObject(js.context['require']);
+        require.callMethod('config', <dynamic>[
+          js.JsObject.jsify({
+            'paths': {
+              'pdfjs-dist/build/pdf': '$_pdfJsVersion/pdf.min',
+              'pdfjs-dist/build/pdf.worker': '$_pdfJsVersion/pdf.worker.min',
+            }
+          })
+        ]);
+
+        final completer = Completer<void>();
+
+        js.context.callMethod('require', <dynamic>[
+          js.JsObject.jsify(
+              ['pdfjs-dist/build/pdf', 'pdfjs-dist/build/pdf.worker']),
+          (dynamic app) {
+            js.context['pdfjsLib'] = app;
+            completer.complete();
+          }
+        ]);
+
+        await completer.future;
+      }
+
+      js.context['pdfjsLib']['GlobalWorkerOptions']['workerSrc'] =
+          '$_pdfJsVersion/pdf.worker.min.js';
+    }
+
+    _loading.release();
+  }
 
   @override
   Future<PrintingInfo> info() async {
-    final dynamic workerSrc = js.context.callMethod('eval', <String>[
-      'typeof pdfjsLib !== "undefined" && pdfjsLib.GlobalWorkerOptions.workerSrc!="";'
-    ]);
-
+    await _initPlugin();
     return PrintingInfo(
       canPrint: true,
       canShare: true,
-      canRaster: workerSrc,
+      canRaster: _hasPdfJsLib,
     );
   }
 
@@ -65,6 +117,7 @@ class PrintingPlugin extends PrintingPlatform {
     String name,
     PdfPageFormat format,
     bool dynamicLayout,
+    bool usePrinterSettings,
   ) async {
     late Uint8List result;
     try {
@@ -112,20 +165,15 @@ class PrintingPlugin extends PrintingPlatform {
       final pdfUrl = html.Url.createObjectUrl(pdfFile);
       final html.HtmlDocument doc = js.context['document'];
 
-      final _frameId = '__net_nfet_printing__${_frameNumber++}';
-      final _scriptId = '__net_nfet_printing_s__${_frameNumber++}';
-
-      // final script = doc.getElementById(_scriptId) ?? doc.createElement('script');
-      final script = doc.createElement('script');
+      final script =
+          doc.getElementById(_scriptId) ?? doc.createElement('script');
       script.setAttribute('id', _scriptId);
       script.setAttribute('type', 'text/javascript');
       script.innerText =
           '''function ${_frameId}_print(){var f=document.getElementById('$_frameId');f.focus();f.contentWindow.print();}''';
       doc.body!.append(script);
 
-      // final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
-      final frame = doc.createElement('iframe');
-
+      final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
       if (isFirefox) {
         // Set the iframe to be is visible on the page (guaranteed by fixed position) but hidden using opacity 0, because
         // this works in Firefox. The height needs to be sufficient for some part of the document other than the PDF
@@ -155,7 +203,11 @@ class PrintingPlugin extends PrintingPlatform {
             stopWatch.stop();
             completer.complete(true);
           } catch (e) {
-            print(e);
+            assert(() {
+              // ignore: avoid_print
+              print('Error: $e');
+              return true;
+            }());
             completer.complete(_getPdf(result));
           }
         });
@@ -235,49 +287,60 @@ class PrintingPlugin extends PrintingPlatform {
     List<int>? pages,
     double dpi,
   ) async* {
+    await _initPlugin();
+
     final t = PdfJs.getDocument(Settings()..data = document);
+    try {
+      final d = await promiseToFuture<PdfJsDoc>(t.promise);
+      final numPages = d.numPages;
 
-    final d = await promiseToFuture<PdfJsDoc>(t.promise);
-    final numPages = d.numPages;
+      final html.CanvasElement canvas =
+          js.context['document'].createElement('canvas');
 
-    final html.CanvasElement canvas =
-        js.context['document'].createElement('canvas');
+      final context = canvas.getContext('2d') as html.CanvasRenderingContext2D?;
+      final _pages =
+          pages ?? Iterable<int>.generate(numPages, (index) => index);
 
-    final context = canvas.getContext('2d') as html.CanvasRenderingContext2D?;
-    final _pages = pages ?? Iterable<int>.generate(numPages, (index) => index);
+      for (final i in _pages) {
+        final page = await promiseToFuture<PdfJsPage>(d.getPage(i + 1));
+        try {
+          final viewport =
+              page.getViewport(Settings()..scale = dpi / PdfPageFormat.inch);
 
-    for (final i in _pages) {
-      final page = await promiseToFuture<PdfJsPage>(d.getPage(i + 1));
-      final viewport = page.getViewport(Settings()..scale = 1.5);
+          canvas.height = viewport.height.toInt();
+          canvas.width = viewport.width.toInt();
 
-      canvas.height = viewport.height.toInt();
-      canvas.width = viewport.width.toInt();
+          final renderContext = Settings()
+            ..canvasContext = context!
+            ..viewport = viewport;
 
-      final renderContext = Settings()
-        ..canvasContext = context!
-        ..viewport = viewport;
+          await promiseToFuture<void>(page.render(renderContext).promise);
 
-      await promiseToFuture<void>(page.render(renderContext).promise);
+          // Convert the image to PNG
+          final completer = Completer<void>();
+          final blob = await canvas.toBlob();
+          final data = BytesBuilder();
+          final r = FileReader();
+          r.readAsArrayBuffer(blob);
+          r.onLoadEnd.listen(
+            (ProgressEvent e) {
+              data.add(r.result as List<int>);
+              completer.complete();
+            },
+          );
+          await completer.future;
 
-      // Convert the image to PNG
-      final completer = Completer<void>();
-      final blob = await canvas.toBlob();
-      final data = BytesBuilder();
-      final r = FileReader();
-      r.readAsArrayBuffer(blob);
-      r.onLoadEnd.listen(
-        (ProgressEvent e) {
-          data.add(r.result as List<int>);
-          completer.complete();
-        },
-      );
-      await completer.future;
-
-      yield _WebPdfRaster(
-        canvas.width!,
-        canvas.height!,
-        data.toBytes(),
-      );
+          yield _WebPdfRaster(
+            canvas.width!,
+            canvas.height!,
+            data.toBytes(),
+          );
+        } finally {
+          page.cleanup();
+        }
+      }
+    } finally {
+      t.destroy();
     }
   }
 }

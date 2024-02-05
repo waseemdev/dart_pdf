@@ -16,9 +16,9 @@
 
 import 'dart:math';
 
-import 'package:pdf/pdf.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
 import 'geometry.dart';
 import 'shape.dart';
 import 'text_style.dart';
@@ -59,8 +59,8 @@ class Anchor extends SingleChildWidget {
 
     if (description != null) {
       final rb = mat.transform3(Vector3(box!.right, box!.top, 0));
-      final ibox = PdfRect.fromLTRB(lt.x, lt.y, rb.x, rb.y);
-      PdfAnnot(context.page, PdfAnnotText(rect: ibox, content: description!));
+      final iBox = PdfRect.fromLTRB(lt.x, lt.y, rb.x, rb.y);
+      PdfAnnot(context.page, PdfAnnotText(rect: iBox, content: description!));
     }
   }
 }
@@ -392,7 +392,7 @@ class AnnotationTextField extends AnnotationBuilder {
         fieldFlags: fieldFlags,
         value: value,
         defaultValue: defaultValue,
-        font: _textStyle.font!.getFont(context)!,
+        font: _textStyle.font!.getFont(context),
         fontSize: _textStyle.fontSize!,
         textColor: _textStyle.color!,
       ),
@@ -622,25 +622,29 @@ class Outline extends Anchor {
       anchor: name,
       color: color,
       style: style,
-      page: context.pageNumber,
-    );
+      page: context.page,
+    )..effectiveLevel = level;
 
-    var parent = context.document.outline;
-    var l = level;
+    final root = context.document.outline;
 
-    while (l > 0) {
-      if (parent.effectiveLevel == l) {
-        break;
-      }
-
-      if (parent.outlines.isEmpty) {
-        parent.effectiveLevel = level;
-        break;
-      }
-      parent = parent.outlines.last;
-      l--;
+    // find the most recently added outline
+    var actualLevel = -1;
+    var candidate = root;
+    while (candidate.outlines.isNotEmpty) {
+      candidate = candidate.outlines.last;
+      actualLevel++;
     }
 
-    parent.add(_outline!);
+    // find the latest added outline with a level lower than ours
+    while (candidate != root) {
+      final candidateLevel = candidate.effectiveLevel ?? actualLevel;
+      if (candidateLevel < level) {
+        break;
+      }
+      candidate = candidate.parent!;
+      actualLevel--;
+    }
+
+    candidate.add(_outline!);
   }
 }

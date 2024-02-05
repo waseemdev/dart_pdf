@@ -16,9 +16,9 @@
 
 import 'dart:math' as math;
 
-import 'package:pdf/pdf.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../pdf.dart';
 import 'flex.dart';
 import 'geometry.dart';
 import 'multi_page.dart';
@@ -57,9 +57,7 @@ class _WrapContext extends WidgetContext {
 
   @override
   WidgetContext clone() {
-    return _WrapContext()
-      ..firstChild = firstChild
-      ..lastChild = lastChild;
+    return _WrapContext()..apply(this);
   }
 
   @override
@@ -192,7 +190,7 @@ class Wrap extends MultiChildWidget with SpanningWidget {
     var runCrossAxisExtent = 0.0;
     var childCount = 0;
 
-    for (var child in children.sublist(_context.firstChild)) {
+    for (final child in children.sublist(_context.firstChild)) {
       child.layout(context, childConstraints, parentUsesSize: true);
 
       final childMainAxisExtent = _getMainAxisExtent(child)!;
@@ -339,7 +337,7 @@ class Wrap extends MultiChildWidget with SpanningWidget {
       }
 
       var currentWidget = _context.lastChild;
-      for (var child in children.sublist(currentWidget)) {
+      for (final child in children.sublist(currentWidget)) {
         final runIndex = childRunMetrics[child];
         if (runIndex != i) {
           break;
@@ -393,6 +391,7 @@ class Wrap extends MultiChildWidget with SpanningWidget {
 
   @override
   void restoreContext(_WrapContext context) {
+    _context.apply(context);
     _context.firstChild = context.lastChild;
   }
 
