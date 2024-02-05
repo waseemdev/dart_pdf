@@ -42,9 +42,7 @@ class PrintingPlugin extends PrintingPlatform {
     PrintingPlatform.instance = PrintingPlugin();
   }
 
-  static const String _scriptId = '__net_nfet_printing_s__';
-
-  static const String _frameId = '__net_nfet_printing__';
+  static int _frameNumber = 0;
 
   static const _pdfJsVersion =
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216';
@@ -165,15 +163,19 @@ class PrintingPlugin extends PrintingPlatform {
       final pdfUrl = html.Url.createObjectUrl(pdfFile);
       final html.HtmlDocument doc = js.context['document'];
 
-      final script =
-          doc.getElementById(_scriptId) ?? doc.createElement('script');
+      final _frameId = '__net_nfet_printing__${_frameNumber++}';
+      final _scriptId = '__net_nfet_printing_s__${_frameNumber++}';
+      // final script = doc.getElementById(_scriptId) ?? doc.createElement('script');
+      final script = doc.createElement('script');
+
       script.setAttribute('id', _scriptId);
       script.setAttribute('type', 'text/javascript');
       script.innerText =
           '''function ${_frameId}_print(){var f=document.getElementById('$_frameId');f.focus();f.contentWindow.print();}''';
       doc.body!.append(script);
 
-      final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
+      // final frame = doc.getElementById(_frameId) ?? doc.createElement('iframe');
+      final frame = doc.createElement('iframe');
       if (isFirefox) {
         // Set the iframe to be is visible on the page (guaranteed by fixed position) but hidden using opacity 0, because
         // this works in Firefox. The height needs to be sufficient for some part of the document other than the PDF
